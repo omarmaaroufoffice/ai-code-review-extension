@@ -232,7 +232,45 @@ class AIConversationPanel {
         while (this._currentIteration < this._maxIterations) {
             // Generate code
             const response = await this._generateResponse(
-                `You are a code generator AI. ${this._currentIteration === 0 ? prompt : 'Improve the code based on the review feedback.'}
+                `You are an expert software developer with a passion for creating comprehensive, well-documented, and feature-rich code. 
+                ${this._currentIteration === 0 ? prompt : 'Enhance and improve the code based on the review feedback. Always look for opportunities to add new features, improve functionality, and enhance the user experience.'}
+
+                IMPORTANT GUIDELINES:
+                1. Code Generation Requirements:
+                   - Write extensive, detailed implementations
+                   - Include comprehensive error handling
+                   - Add detailed comments and documentation
+                   - Implement proper logging
+                   - Include unit tests where applicable
+                   - Add input validation and security measures
+                   - Consider edge cases and handle them appropriately
+
+                2. Enhancement Focus:
+                   - Always look for opportunities to add new useful features
+                   - Enhance existing functionality with additional options
+                   - Add proper TypeScript types and interfaces
+                   - Implement performance optimizations
+                   - Add accessibility features
+                   - Include responsive design in UI components
+                   - Add animations and transitions where appropriate
+
+                3. Style and Best Practices:
+                   - Follow clean code principles
+                   - Use modern JavaScript/TypeScript features
+                   - Implement proper design patterns
+                   - Add CSS variables for theming
+                   - Include media queries for responsiveness
+                   - Add hover states and animations
+                   - Implement proper spacing and layout
+
+                4. Documentation:
+                   - Add JSDoc comments for functions
+                   - Include usage examples
+                   - Document all parameters and return types
+                   - Add README sections for new features
+                   - Include setup instructions
+                   - Document any configuration options
+
                 When generating code, use the following format for code blocks:
                 
                 --------------------------------------------------
@@ -248,6 +286,24 @@ class AIConversationPanel {
                 Available operations are: append, modify, insert, delete.
                 Ensure the JSON metadata block is properly formatted and includes all required fields.
                 Use clear blockIds that indicate the purpose of each block.
+
+                For each feature or component:
+                1. Start with interface/type definitions
+                2. Implement the core functionality
+                3. Add helper functions and utilities
+                4. Implement error handling
+                5. Add styling and animations
+                6. Include tests and documentation
+                7. Add performance optimizations
+
+                Remember to:
+                - Make code modular and reusable
+                - Include proper separation of concerns
+                - Add appropriate loading states
+                - Implement proper state management
+                - Add proper event handling
+                - Include proper cleanup in components
+                - Add proper logging and debugging
                 `,
                 request,
                 true
@@ -260,16 +316,48 @@ class AIConversationPanel {
 
             // Get code review if not the last iteration
             if (this._currentIteration < this._maxIterations - 1) {
-                const reviewPrompt = `You are a code reviewer AI. Review the following code implementation and suggest specific improvements.
+                const reviewPrompt = `You are a senior code reviewer with high standards for code quality and completeness. 
+                Review the following code implementation and suggest specific improvements.
+                
+                Focus on:
+                1. Code Completeness:
+                   - Are there missing features or functionality?
+                   - Could existing features be enhanced?
+                   - Are there opportunities for additional useful features?
+                   - Is error handling comprehensive?
+
+                2. Code Quality:
+                   - Is the code well-structured and maintainable?
+                   - Are there opportunities for optimization?
+                   - Is the code following best practices?
+                   - Are types and interfaces properly defined?
+
+                3. User Experience:
+                   - Are there opportunities for better UI/UX?
+                   - Could animations or transitions be added?
+                   - Is the interface responsive and accessible?
+                   - Are loading states properly handled?
+
+                4. Documentation:
+                   - Is the code well-documented?
+                   - Are there missing usage examples?
+                   - Is configuration properly explained?
+                   - Are there opportunities for better documentation?
+
                 Reference specific code blocks using their blockIds when suggesting changes.
                 Format your suggestions using the same code block structure with proper JSON metadata.
                 ${response}
                 
-                Format your review with specific line numbers and block IDs where applicable.`;
+                Format your review with specific line numbers and block IDs where applicable.
+                For each suggestion, explain:
+                1. What could be improved
+                2. Why it should be improved
+                3. How it should be implemented
+                4. What benefits the improvement brings`;
                 
                 const review = await this._generateResponse(reviewPrompt, '', false);
                 if (review) {
-                    request = `Previous implementation: ${response}\n\nReview feedback: ${review}\n\nPlease implement the suggested improvements using the same code block format with proper JSON metadata.`;
+                    request = `Previous implementation: ${response}\n\nReview feedback: ${review}\n\nPlease implement ALL suggested improvements using the same code block format with proper JSON metadata. Additionally, look for opportunities to add more features and enhancements beyond those specifically suggested in the review.`;
                 }
             }
 
