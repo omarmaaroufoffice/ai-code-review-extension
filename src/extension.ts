@@ -19,6 +19,17 @@ interface FileModification {
     operation: 'append' | 'modify' | 'insert' | 'delete';
 }
 
+interface ContextStats {
+    conversationChars: number;
+    codeBlockChars: number;
+    fileModificationChars: number;
+    totalMessages: number;
+    totalCodeBlocks: number;
+    totalFileModifications: number;
+    byFileType: Map<string, number>;
+    byOperation: Map<string, number>;
+}
+
 class AIConversationPanel {
     public static currentPanel: AIConversationPanel | undefined;
     private readonly _panel: vscode.WebviewPanel;
@@ -31,6 +42,16 @@ class AIConversationPanel {
     private _outputPath: string = '';
     private _codeBlocks: Map<string, CodeBlock> = new Map();
     private _fileModifications: FileModification[] = [];
+    private _contextStats: ContextStats = {
+        conversationChars: 0,
+        codeBlockChars: 0,
+        fileModificationChars: 0,
+        totalMessages: 0,
+        totalCodeBlocks: 0,
+        totalFileModifications: 0,
+        byFileType: new Map(),
+        byOperation: new Map()
+    };
 
     private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
         this._panel = panel;
@@ -146,31 +167,81 @@ class AIConversationPanel {
             existingLines = existingContent.split('\n');
         }
 
+        // Track modified lines to prevent duplication
+        const modifiedLines = new Set<number>();
+
         for (const block of blocks) {
+            // Check if we're trying to modify lines that were already modified
+            const blockLines = new Set(Array.from(
+                { length: block.endLine - block.startLine + 1 },
+                (_, i) => block.startLine + i
+            ));
+
+            // Check for overlap with previously modified lines
+            const hasOverlap = Array.from(blockLines).some(line => modifiedLines.has(line));
+
+            if (hasOverlap && operation !== 'delete') {
+                console.warn(`Skipping duplicate modification at lines ${block.startLine}-${block.endLine} in ${filePath}`);
+                continue;
+            }
+
             switch (operation) {
                 case 'append':
                     if (!existingContent) {
                         fs.writeFileSync(filePath, block.content);
+                        existingContent = block.content;
+                        existingLines = existingContent.split('\n');
                     } else {
-                        fs.appendFileSync(filePath, '\n' + block.content);
+                        // Check if the content already exists at the end of the file
+                        const blockLines = block.content.split('\n');
+                        const existingEndLines = existingLines.slice(-blockLines.length);
+                        
+                        if (!existingEndLines.every((line, i) => line === blockLines[i])) {
+                            fs.appendFileSync(filePath, '\n' + block.content);
+                            existingLines.push(...blockLines);
+                        }
                     }
                     break;
 
                 case 'modify':
                     if (block.startLine > 0 && block.endLine <= existingLines.length) {
-                        existingLines.splice(
-                            block.startLine - 1,
-                            block.endLine - block.startLine + 1,
-                            block.content
-                        );
-                        fs.writeFileSync(filePath, existingLines.join('\n'));
+                        // Check if the content is actually different
+                        const currentContent = existingLines
+                            .slice(block.startLine - 1, block.endLine)
+                            .join('\n');
+                        
+                        if (currentContent !== block.content) {
+                            existingLines.splice(
+                                block.startLine - 1,
+                                block.endLine - block.startLine + 1,
+                                block.content
+                            );
+                            fs.writeFileSync(filePath, existingLines.join('\n'));
+                            
+                            // Mark these lines as modified
+                            blockLines.forEach(line => modifiedLines.add(line));
+                        }
                     }
                     break;
 
                 case 'insert':
                     if (block.startLine > 0) {
-                        existingLines.splice(block.startLine - 1, 0, block.content);
-                        fs.writeFileSync(filePath, existingLines.join('\n'));
+                        // Check if the content already exists at the insertion point
+                        const blockLines = block.content.split('\n');
+                        const existingBlockLines = existingLines.slice(
+                            block.startLine - 1,
+                            block.startLine - 1 + blockLines.length
+                        );
+                        
+                        if (!existingBlockLines.every((line, i) => line === blockLines[i])) {
+                            existingLines.splice(block.startLine - 1, 0, ...blockLines);
+                            fs.writeFileSync(filePath, existingLines.join('\n'));
+                            
+                            // Mark these lines as modified
+                            blockLines.forEach((_, i) => 
+                                modifiedLines.add(block.startLine + i)
+                            );
+                        }
                     }
                     break;
 
@@ -181,10 +252,17 @@ class AIConversationPanel {
                             block.endLine - block.startLine + 1
                         );
                         fs.writeFileSync(filePath, existingLines.join('\n'));
+                        
+                        // Mark these lines as modified
+                        blockLines.forEach(line => modifiedLines.add(line));
                     }
                     break;
             }
         }
+
+        // Update the file modifications tracking
+        this._fileModifications.push(modification);
+        this._updateContextStats();
     }
 
     public static createOrShow(extensionUri: vscode.Uri) {
@@ -413,43 +491,146 @@ class AIConversationPanel {
             model: "o3-mini",
             messages: [
                 { role: "system", content: systemPrompt },
-                ...this._conversationHistory,
+                ...this._conversationHistory.slice(-2),  // Only include last 2 messages
                 { role: "user", content: userMessage }
             ],
             reasoning_effort: "high",
-            max_completion_tokens: 100000,
         });
 
         const aiResponse = response.choices[0]?.message?.content || 'No response generated';
-        this._conversationHistory.push(
+        
+        // Update conversation history keeping only last 2 messages
+        const newMessages: ChatCompletionMessageParam[] = [
             { role: "user", content: userMessage },
             { role: "assistant", content: aiResponse }
-        );
+        ];
+        this._conversationHistory = [
+            ...this._conversationHistory.slice(-1),
+            ...newMessages
+        ].slice(-2);
 
         this._updateWebview(this._formatConversation());
         return aiResponse;
     }
 
+    private _updateContextStats() {
+        // Reset stats
+        this._contextStats = {
+            conversationChars: 0,
+            codeBlockChars: 0,
+            fileModificationChars: 0,
+            totalMessages: this._conversationHistory.length,
+            totalCodeBlocks: this._codeBlocks.size,
+            totalFileModifications: this._fileModifications.length,
+            byFileType: new Map(),
+            byOperation: new Map()
+        };
+
+        // Calculate conversation characters
+        this._conversationHistory.forEach(msg => {
+            if (typeof msg.content === 'string') {
+                this._contextStats.conversationChars += msg.content.length;
+            }
+        });
+
+        // Calculate code block characters and file types
+        this._codeBlocks.forEach(block => {
+            this._contextStats.codeBlockChars += block.content.length;
+            const count = this._contextStats.byFileType.get(block.type) || 0;
+            this._contextStats.byFileType.set(block.type, count + 1);
+        });
+
+        // Calculate file modification characters and operations
+        this._fileModifications.forEach(mod => {
+            mod.blocks.forEach(block => {
+                this._contextStats.fileModificationChars += block.content.length;
+            });
+            const count = this._contextStats.byOperation.get(mod.operation) || 0;
+            this._contextStats.byOperation.set(mod.operation, count + 1);
+        });
+    }
+
+    private _formatStats(): string {
+        this._updateContextStats();
+        
+        const fileTypeStats = Array.from(this._contextStats.byFileType.entries())
+            .map(([type, count]) => `${type}: ${count}`)
+            .join(', ');
+
+        const operationStats = Array.from(this._contextStats.byOperation.entries())
+            .map(([op, count]) => `${op}: ${count}`)
+            .join(', ');
+
+        return `
+            <div class="stats-panel">
+                <h3>Context Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">Messages:</span>
+                        <span class="stat-value">${this._contextStats.totalMessages}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Message Characters:</span>
+                        <span class="stat-value">${this._contextStats.conversationChars.toLocaleString()}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Code Blocks:</span>
+                        <span class="stat-value">${this._contextStats.totalCodeBlocks}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Code Characters:</span>
+                        <span class="stat-value">${this._contextStats.codeBlockChars.toLocaleString()}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">File Modifications:</span>
+                        <span class="stat-value">${this._contextStats.totalFileModifications}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Modification Characters:</span>
+                        <span class="stat-value">${this._contextStats.fileModificationChars.toLocaleString()}</span>
+                    </div>
+                </div>
+                <div class="stats-details">
+                    <div class="stat-row">
+                        <span class="stat-label">File Types:</span>
+                        <span class="stat-value">${fileTypeStats || 'None'}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Operations:</span>
+                        <span class="stat-value">${operationStats || 'None'}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     private _formatConversation(): string {
-        return this._conversationHistory
-            .map((msg, index) => {
-                const speaker = msg.role === 'user' ? 
-                    'User' : 
-                    `AI ${this._currentIteration + 1} - ${index % 4 === 2 ? 'Generator' : 'Reviewer'}`;
-                const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-                return `<div class="${msg.role}-message">
-                    <strong>${speaker}:</strong> ${this._formatCodeBlocks(content)}
-                </div>`;
-            })
-            .join('\n');
+        return `
+            ${this._formatStats()}
+            ${this._conversationHistory
+                .map((msg, index) => {
+                    const speaker = msg.role === 'user' ? 
+                        'User' : 
+                        `AI ${this._currentIteration + 1} - ${index % 4 === 2 ? 'Generator' : 'Reviewer'}`;
+                    const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+                    return `<div class="${msg.role}-message">
+                        <strong>${speaker}:</strong> ${this._formatCodeBlocks(content)}
+                    </div>`;
+                })
+                .join('\n')}
+        `;
     }
 
     private _formatCodeBlocks(content: string): string {
-        return content.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => `
-            <pre class="code-block ${lang || ''}">
-                <code>${this._escapeHtml(code)}</code>
-            </pre>
-        `);
+        return content.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
+            // Remove any leading/trailing whitespace and the markers
+            const cleanCode = code.trim();
+            return `
+                <pre class="code-block ${lang || ''}">
+                    <code>${this._escapeHtml(cleanCode)}</code>
+                </pre>
+            `;
+        });
     }
 
     private _escapeHtml(unsafe: string): string {
@@ -478,6 +659,38 @@ class AIConversationPanel {
                     padding: 20px;
                     color: var(--vscode-foreground);
                     background-color: var(--vscode-editor-background);
+                }
+                .stats-panel {
+                    background-color: var(--vscode-editor-lineHighlightBackground);
+                    border-radius: 8px;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                }
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 10px;
+                    margin-bottom: 15px;
+                }
+                .stat-item {
+                    background-color: var(--vscode-editor-background);
+                    padding: 8px;
+                    border-radius: 4px;
+                }
+                .stats-details {
+                    background-color: var(--vscode-editor-background);
+                    padding: 10px;
+                    border-radius: 4px;
+                }
+                .stat-row {
+                    margin: 5px 0;
+                }
+                .stat-label {
+                    font-weight: bold;
+                    margin-right: 8px;
+                }
+                .stat-value {
+                    font-family: monospace;
                 }
                 .user-message, .assistant-message {
                     margin: 10px 0;
@@ -517,7 +730,6 @@ class AIConversationPanel {
         </head>
         <body>
             <button onclick="startConversation()">Start New Code Generation</button>
-            <div class="iteration-info">Current Iteration: ${this._currentIteration + 1} of ${this._maxIterations}</div>
             <div id="conversation">
                 ${content}
             </div>
