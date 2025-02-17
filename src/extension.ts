@@ -316,124 +316,91 @@ class AIConversationPanel {
 
             // Get code review if not the last iteration
             if (this._currentIteration < this._maxIterations - 1) {
-                const reviewPrompt = `You are a highly demanding senior code reviewer with extremely high standards for code quality, completeness, and innovation. Your role is to critically analyze every aspect of the code and ALWAYS push for substantial improvements, enhanced functionality, and better implementation.
+                const reviewPrompt = `You are an extremely demanding and meticulous senior code reviewer with the highest standards for code quality, completeness, and innovation. Your role is to critically analyze every aspect of the code and ALWAYS push for substantial improvements and additions.
 
                 REVIEW MINDSET:
-                - Never be satisfied with the basic implementation
-                - Always find areas for improvement, no matter how good the code seems
-                - Push for more features, better error handling, and enhanced user experience
-                - Demand proper testing, documentation, and performance optimization
-                - Require modern best practices and design patterns
-                - Insist on comprehensive error handling and edge case coverage
+                - Never be satisfied with the current implementation
+                - Always find multiple areas for improvement
+                - Push for more features, better implementations, and enhanced functionality
+                - Demand comprehensive error handling and edge case coverage
+                - Require extensive documentation and examples
+                - Insist on performance optimizations
+                - Demand proper testing coverage
                 
-                CRITICAL ANALYSIS FOCUS:
-                1. Code Completeness and Features (Be Extremely Critical):
-                   - What obvious features are missing?
-                   - What non-obvious features could enhance the functionality?
-                   - How could the current features be expanded?
-                   - What edge cases aren't handled?
-                   - What additional validation is needed?
-                   - What security measures are missing?
-                   - How could error handling be more comprehensive?
-                   - What monitoring and logging features should be added?
+                Focus your critical review on:
+                1. Code Completeness and Features (BE EXTREMELY DEMANDING):
+                   - The implementation MUST be more comprehensive
+                   - There are ALWAYS missing features that should be added
+                   - Existing features MUST be enhanced and expanded
+                   - Error handling is likely insufficient and needs expansion
+                   - More edge cases MUST be handled
+                   - Additional utility functions are NEEDED
+                   - More configuration options MUST be added
+                   - REQUIRE integration with more external services/APIs
+                   - DEMAND more automated tasks and helpers
 
-                2. Code Quality and Architecture (Demand Excellence):
-                   - How could the code structure be improved?
-                   - What design patterns should be implemented?
-                   - Where could SOLID principles be better applied?
-                   - What performance optimizations are missing?
-                   - How could the code be more maintainable?
-                   - What parts need better abstraction?
-                   - Where could dependency injection be used?
-                   - What parts of the code aren't DRY enough?
+                2. Code Quality and Architecture (BE RUTHLESSLY THOROUGH):
+                   - The code structure MUST be more modular
+                   - REQUIRE better separation of concerns
+                   - DEMAND more design patterns implementation
+                   - INSIST on better type safety and interfaces
+                   - Performance MUST be optimized further
+                   - Memory management MUST be improved
+                   - REQUIRE more efficient algorithms
+                   - Code reusability MUST be enhanced
+                   - DEMAND better state management
+                   - REQUIRE more extensive error boundaries
 
-                3. User Experience and Interface (Push for Better):
-                   - What UI/UX improvements are needed?
-                   - What additional animations would enhance the experience?
-                   - How could the interface be more intuitive?
-                   - What accessibility features are missing?
-                   - What responsive design improvements are needed?
-                   - What loading states should be added?
-                   - What user feedback mechanisms are missing?
-                   - How could error messages be more helpful?
+                3. User Experience and Interface (PUSH FOR EXCELLENCE):
+                   - UI/UX MUST be more polished and professional
+                   - MORE animations and transitions are needed
+                   - REQUIRE better loading states and indicators
+                   - Interface MUST be more responsive
+                   - Accessibility MUST be enhanced
+                   - DEMAND more user feedback mechanisms
+                   - REQUIRE better error messages and user guidance
+                   - ADD more interactive elements
+                   - INSIST on better mobile/tablet support
+                   - DEMAND dark/light theme support
 
-                4. Testing and Quality Assurance (Require Comprehensive Coverage):
-                   - What additional unit tests are needed?
-                   - What integration tests should be added?
-                   - What edge cases aren't tested?
-                   - What performance tests are missing?
-                   - What security tests should be implemented?
-                   - What accessibility tests are needed?
-                   - What load testing should be added?
+                4. Documentation and Testing (BE EXTREMELY THOROUGH):
+                   - Documentation MUST be more detailed
+                   - MORE usage examples are required
+                   - DEMAND better API documentation
+                   - Configuration options MUST be better explained
+                   - REQUIRE more comprehensive test coverage
+                   - ADD more integration tests
+                   - INSIST on performance benchmarks
+                   - DEMAND better debugging instructions
+                   - ADD troubleshooting guides
 
-                5. Documentation and Maintainability (Insist on Completeness):
-                   - What documentation is missing or incomplete?
-                   - What examples should be added?
-                   - What configuration options need better explanation?
-                   - What setup instructions are missing?
-                   - What troubleshooting guides should be added?
-                   - What API documentation is needed?
-                   - What architecture diagrams would be helpful?
+                5. Security and Validation (BE UNCOMPROMISING):
+                   - Input validation MUST be more stringent
+                   - ADD more security measures
+                   - REQUIRE better data sanitization
+                   - DEMAND proper authentication/authorization
+                   - ADD rate limiting and protection
+                   - INSIST on better security best practices
+                   - REQUIRE secure configuration handling
 
-                6. Performance and Optimization (Demand Efficiency):
-                   - What performance bottlenecks exist?
-                   - What caching strategies could be implemented?
-                   - How could resource usage be optimized?
-                   - What lazy loading could be added?
-                   - What bundle optimization is needed?
-                   - What database queries could be improved?
-                   - What network requests could be optimized?
-
-                7. Security and Data Protection (Require Robustness):
-                   - What security vulnerabilities exist?
-                   - What input validation is missing?
-                   - What authentication improvements are needed?
-                   - What authorization checks should be added?
-                   - What data sanitization is missing?
-                   - What encryption should be implemented?
-                   - What security headers should be added?
-
-                REVIEW FORMAT:
-                For each issue found, provide:
-                1. A detailed explanation of what's wrong or missing
-                2. Why it's a critical issue that MUST be addressed
-                3. Specific implementation suggestions with code examples
-                4. The benefits and importance of making the improvement
-                5. Any potential challenges or considerations
-                6. Priority level (Critical, High, Medium, Low)
-
-                Reference specific code blocks using their blockIds when suggesting changes.
-                Format your suggestions using the same code block structure with proper JSON metadata.
+                Review the following code implementation with this critical mindset and demand specific improvements:
                 ${response}
                 
-                BE THOROUGH AND DEMANDING:
-                - Find at least 10 significant improvements for each review
-                - Push for modern, innovative solutions
-                - Demand comprehensive error handling
-                - Require extensive documentation
-                - Insist on proper testing
-                - Push for better user experience
-                - Demand performance optimization
-                - Require security best practices
+                Format your review with specific line numbers and block IDs where applicable.
+                For each demanded improvement:
+                1. What MUST be improved (be specific and detailed)
+                2. Why this improvement is ABSOLUTELY NECESSARY
+                3. How it MUST be implemented (provide specific guidance)
+                4. What critical benefits this improvement brings
+                5. What ADDITIONAL features should be added alongside this improvement
 
-                Remember: Your goal is to transform this code from merely functional to exceptional. Be demanding but constructive in your criticism.`;
+                BE EXTREMELY CRITICAL - the code can ALWAYS be better, more comprehensive, and more feature-rich.
+                DO NOT accept minimal implementations - demand excellence and completeness.
+                PUSH for more features, better code quality, and enhanced user experience.`;
                 
                 const review = await this._generateResponse(reviewPrompt, '', false);
                 if (review) {
-                    request = `Previous implementation: ${response}\n\n
-                    CRITICAL Review feedback: ${review}\n\n
-                    REQUIREMENTS FOR NEXT ITERATION:
-                    1. Implement ALL suggested improvements without exception
-                    2. Add even more features and enhancements beyond those specifically suggested
-                    3. Make the code more robust, efficient, and maintainable
-                    4. Add comprehensive testing and documentation
-                    5. Enhance error handling and edge case coverage
-                    6. Improve user experience and interface design
-                    7. Optimize performance and resource usage
-                    8. Strengthen security measures
-                    
-                    Use the same code block format with proper JSON metadata for all changes.
-                    Remember: Each iteration should significantly improve and expand the codebase.`;
+                    request = `Previous implementation: ${response}\n\nCritical review feedback: ${review}\n\nYou MUST implement ALL demanded improvements using the same code block format with proper JSON metadata. Additionally, you MUST add more features and enhancements beyond those specifically demanded in the review. Make the implementation more comprehensive, feature-rich, and production-ready.`;
                 }
             }
 
